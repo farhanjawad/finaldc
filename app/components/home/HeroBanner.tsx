@@ -8,12 +8,12 @@ export default function HeroBanner() {
   const { dict } = useLanguage();
 
   return (
-    <section className="relative w-full min-h-[520px] md:min-h-[580px] flex items-center justify-center text-center overflow-hidden bg-slate-900">
+    <section className="relative w-full min-h-130 md:min-h-145 flex items-center justify-center text-center overflow-hidden bg-slate-900">
       {/* Background Graphic & Gradient Overlay */}
       <div 
         className="absolute inset-0 bg-cover bg-center opacity-30 mix-blend-luminosity scale-105 transition-transform duration-1000"
         style={{
-          backgroundImage: `url('/images/hero-campus.jpg')`,
+          backgroundImage: `url('/images/ku.jpg')`,
         }}
         aria-hidden="true"
       />
