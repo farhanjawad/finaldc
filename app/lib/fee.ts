@@ -16,7 +16,7 @@ export function calculateRegistrationFee(
     return {
       batchYear,
       isEligibleForDiscount: true,
-      feeAmount: 50,
+      feeAmount: 30,
     };
   }
 
@@ -25,13 +25,13 @@ export function calculateRegistrationFee(
       return {
         batchYear,
         isEligibleForDiscount: true,
-        feeAmount: 50,
+        feeAmount: 30,
       };
     }
     return {
       batchYear,
       isEligibleForDiscount: false,
-      feeAmount: 100,
+      feeAmount: 70,
     };
   }
 
@@ -39,6 +39,6 @@ export function calculateRegistrationFee(
   return {
     batchYear,
     isEligibleForDiscount: false,
-    feeAmount: 100,
+    feeAmount: 70,
   };
 }
