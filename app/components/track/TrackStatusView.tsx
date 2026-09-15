@@ -59,7 +59,7 @@ export default function TrackStatusView() {
       {/* Search Bar Input */}
       <form onSubmit={onFormSubmit} className="relative print:hidden">
         <div className="flex items-center gap-2">
-          <div className="relative flex-grow">
+          <div className="relative grow">
             <input
               type="text"
               value={query}

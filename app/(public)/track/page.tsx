@@ -3,7 +3,7 @@ import TrackStatusView from '../../components/track/TrackStatusView';
 import { Loader2 } from 'lucide-react';
 
 export const metadata = {
-  title: 'রেজিস্ট্রেশন স্ট্যাটাস ট্র্যাক | KU Deeni Community',
+  title: 'রেজিস্ট্রেশন স্ট্যাটাস ট্র্যাক',
   description: 'খুলনা বিশ্ববিদ্যালয় দ্বীনি কমিউনিটি ইভেন্ট রেজিস্ট্রেশনের অবস্থা ও ইভেন্ট পাস চেক করুন।',
 };
 

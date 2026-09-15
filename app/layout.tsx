@@ -17,8 +17,8 @@ const notoSerifBengali = Noto_Serif_Bengali({
 });
 
 export const metadata: Metadata = {
-  title: 'KU Deeni Community',
-  description: 'খুলনা বিশ্ববিদ্যালয় দ্বীনি কমিউনিটি - অফিসিয়াল প্ল্যাটফর্ম',
+  title: 'Khulna University Deeni Community',
+  description: 'খুলনা বিশ্ববিদ্যালয় দ্বীনি কমিউনিটি ',
 };
 
 export default function RootLayout({

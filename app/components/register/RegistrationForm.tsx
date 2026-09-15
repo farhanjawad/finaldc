@@ -40,7 +40,7 @@ export default function RegistrationForm() {
     gender: '',
     batchYear: '',
     isContinuing26: false,
-    feeAmount: 70,
+    feeAmount: 0,
     paymentMethod: '',
     transactionId: '',
     senderNumber: '',

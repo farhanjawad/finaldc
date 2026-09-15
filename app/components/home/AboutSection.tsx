@@ -10,17 +10,17 @@ export default function AboutSection() {
     <section id="about" className="w-full py-16 md:py-24 bg-white dark:bg-slate-900 transition-colors">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 lg:gap-14 items-center">
-          
+
           {/* Left Column: Campus / Monument Visual */}
           <div className="md:col-span-5 relative">
-            <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800">
-              <div 
+            <div className="relative aspect-4/3 rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800">
+              <div
                 className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
                 style={{
-                  backgroundImage: `url('/images/about-campus.jpg')`,
+                  backgroundImage: `url('/images/m3.jpg')`,
                 }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent" />
             </div>
             {/* Decorative subtle backdrop accent */}
             <div className="absolute -bottom-4 -right-4 -z-10 w-full h-full rounded-2xl border-2 border-emerald-500/20 dark:border-emerald-400/20" />

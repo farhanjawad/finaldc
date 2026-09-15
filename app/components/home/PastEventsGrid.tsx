@@ -5,9 +5,9 @@ import Link from 'next/link';
 import { useLanguage } from '../../context/LanguageContext';
 
 const POSTER_IMAGE_MAP: Record<string, string> = {
-  'dawah-seminar': '/images/events/dawah-seminar.jpg',
-  'gono-iftar-2025': '/images/events/gono-iftar.jpg',
-  'seerat-conference-2024': '/images/events/seerat-conf.jpg',
+  'dawah-seminar': '/images/ss.jpg',
+  'gono-iftar-2026': '/images/gi.jpg',
+  'seerat-conference-2024': '/images/seraath.jpg',
 };
 
 export default function PastEventsGrid() {
@@ -32,22 +32,22 @@ export default function PastEventsGrid() {
               className="bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col group"
             >
               {/* Event Poster Card Aspect Area */}
-              <div className="relative aspect-[4/3] bg-slate-100 dark:bg-slate-800 overflow-hidden">
+              <div className="relative aspect-4/3 bg-slate-100 dark:bg-slate-800 overflow-hidden">
                 <div
                   className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
                   style={{
                     backgroundImage: `url('${POSTER_IMAGE_MAP[event.id] || '/images/event-placeholder.jpg'}')`,
                   }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-60" />
+                <div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-transparent opacity-60" />
               </div>
 
               {/* Event Text Info */}
-              <div className="p-6 flex flex-col flex-grow text-center">
+              <div className="p-6 flex flex-col grow text-center">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                   {event.title}
                 </h3>
-                <p className="mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed flex-grow">
+                <p className="mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed grow">
                   {event.subtitle}
                 </p>
               </div>

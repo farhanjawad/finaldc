@@ -4,8 +4,8 @@ import React from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 
 const SPEAKER_IMAGES = [
-  '/images/speakers/speaker-1.jpg',
-  '/images/speakers/speaker-2.jpg',
+  '/images/rf.jpg',
+  '/images/said.png',
 ];
 
 export default function SpeakerGrid() {
@@ -48,7 +48,7 @@ export default function SpeakerGrid() {
               </p>
 
               {/* Speaker Bio */}
-              <p className="mt-3 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed flex-grow">
+              <p className="mt-3 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed grow">
                 {speaker.bio}
               </p>
 

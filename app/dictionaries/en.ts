@@ -10,7 +10,7 @@ export const en = {
   home: {
     hero: {
       title: 'Welcome to 106 Acres',
-      ayahArabic: 'إِنَّمَا الْمُؤْمِنُونَ إِخْوَةٌ فَأَصْلِحُوا بَيْنَ أَخَوَيْكُمْ',
+      ayahArabic: 'إِنَّمَا الْمُؤْمِنُونَ إِخْوَةٌ ',
       ayahTranslation: 'The believers are but brothers, so make settlement between your brothers.',
       ayahReference: '— Surah Al-Hujurat 49:10',
       ctaButton: 'Explore Events',
@@ -127,10 +127,10 @@ export const en = {
     nextToPayment: 'Proceed to Payment',
     backBtn: 'Previous Step',
     paymentMethod: 'Select Payment Method',
-    bkashNagad: 'bKash / Nagad (Personal/Merchant)',
+    bkashNagad: 'bKash / Nagad (Personal)',
     ambassador: 'Paid via Campus Ambassador',
     paymentInstructions: 'Send the designated registration fee to the account below and provide the transaction reference:',
-    paymentNumbers: 'bKash / Nagad: 01700-000000',
+    paymentNumbers: 'bKash / Nagad: 01810941555',
     trxId: 'Transaction ID (TrxID)',
     trxIdPlaceholder: 'e.g. 9K8X2LM',
     senderNumber: 'Sender Account Number',
