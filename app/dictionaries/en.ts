@@ -64,7 +64,7 @@ export const en = {
     batch25Highlight: 'Students from Batch 25 who are continuing their studies alongside Batch 26 also qualify for the 50 BDT subsidized fee.',
     generalFeeNote: 'For students belonging to all other academic batches, the registration fee is 100 BDT.',
     infoCards: {
-      date: 'Date: September 12',
+      date: 'Date: September 19',
       time: 'Time: 2:00 PM',
       venue: 'Venue: Central Mosque, Khulna University',
     },
@@ -86,11 +86,11 @@ export const en = {
     scheduleHeading: 'Program Schedule',
     scheduleItems: [
       {
-        time: '2:00 PM - Opening Session',
+        time: ' 4:00 PM - Opening Session',
         desc: 'Quran recitation and opening remarks',
       },
       {
-        time: '3:00 PM - Main Keynote',
+        time: '5:00 PM - Main Keynote',
         desc: 'Guest lectures and open interactive Q&A',
       },
       {

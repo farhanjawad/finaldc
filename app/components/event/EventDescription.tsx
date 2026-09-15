@@ -21,9 +21,6 @@ export default function EventDescription() {
 
         {/* Narrative Paragraphs */}
         <div className="space-y-4 text-slate-700 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
-          <p className="font-semibold text-emerald-700 dark:text-emerald-400">
-            {dict.eventDetails.audienceNote}
-          </p>
           {dict.eventDetails.descriptionParagraphs.map((paragraph, index) => (
             <p key={index}>
               {paragraph}

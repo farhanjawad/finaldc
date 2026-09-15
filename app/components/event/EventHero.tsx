@@ -9,7 +9,7 @@ export default function EventHero() {
   const { dict } = useLanguage();
 
   return (
-    <section className="relative w-full py-16 md:py-24 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
+    <section className="relative w-full py-16 md:py-24 bg-linear-to-b from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
       {/* Subtle Background Backdrop */}
       <div 
         className="absolute inset-0 bg-cover bg-center opacity-20 mix-blend-overlay"

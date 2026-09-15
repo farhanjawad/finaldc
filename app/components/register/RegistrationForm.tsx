@@ -40,7 +40,7 @@ export default function RegistrationForm() {
     gender: '',
     batchYear: '',
     isContinuing26: false,
-    feeAmount: 100,
+    feeAmount: 70,
     paymentMethod: '',
     transactionId: '',
     senderNumber: '',
@@ -248,7 +248,7 @@ export default function RegistrationForm() {
                       : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
                   }`}
                 >
-                  {dict.form.yes} (ফি ৫০ ৳)
+                  {dict.form.yes} (ফি ৩০ ৳)
                 </button>
                 <button
                   type="button"
@@ -259,7 +259,7 @@ export default function RegistrationForm() {
                       : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
                   }`}
                 >
-                  {dict.form.no} (ফি ১০০ ৳)
+                  {dict.form.no} (ফি ৭০ ৳)
                 </button>
               </div>
             </div>
