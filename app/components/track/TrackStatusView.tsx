@@ -1,162 +1,199 @@
 'use client';
 
-import React, { useState, useTransition, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import React from 'react';
+import { TrackResult } from '@/app/actions/track';
 import { useLanguage } from '../../context/LanguageContext';
-import { getRegistrationStatus } from '../../actions/track';
-import { RegistrationRecord } from '../../lib/types';
-import EventPassCard from '../../components/pass/EventPassCard';
 import { 
-  Search, 
-  Loader2, 
+  CheckCircle2, 
   Clock, 
   XCircle, 
-  CheckCircle2, 
-  AlertCircle,
-  HelpCircle
+  Printer, 
+  QrCode, 
+  User, 
+  Hash, 
+  GraduationCap, 
+  Receipt,
+  CreditCard,
+  ShieldCheck,
+  AlertTriangle
 } from 'lucide-react';
 
-export default function TrackStatusView() {
-  const { dict } = useLanguage();
-  const searchParams = useSearchParams();
-  const initialCode = searchParams.get('code') || '';
+interface TrackStatusViewProps {
+  data: TrackResult;
+}
 
-  const [query, setQuery] = useState(initialCode);
-  const [isPending, startTransition] = useTransition();
-  const [record, setRecord] = useState<RegistrationRecord | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+export default function TrackStatusView({ data }: TrackStatusViewProps) {
+  const { language } = useLanguage();
 
-  // Auto-search if `code` query parameter exists in the URL
-  useEffect(() => {
-    if (initialCode) {
-      handleSearch(initialCode);
+  const isBn = language === 'bn';
+
+  const renderStatusBadge = () => {
+    if (data.checked_in) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-300/40">
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          {isBn ? 'উপস্থিত (Checked-In)' : 'Checked-In'}
+        </span>
+      );
     }
-  }, [initialCode]);
 
-  const handleSearch = (searchVal: string) => {
-    const clean = searchVal.trim();
-    if (!clean) return;
-
-    setErrorMessage(null);
-    startTransition(async () => {
-      const res = await getRegistrationStatus(clean);
-      if (res.success && res.data) {
-        setRecord(res.data);
-      } else {
-        setRecord(null);
-        setErrorMessage(res.error || 'কোনো তথ্য পাওয়া যায়নি।');
-      }
-    });
-  };
-
-  const onFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSearch(query);
+    switch (data.payment_status) {
+      case 'approved':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            {isBn ? 'অনুমোদিত (Approved)' : 'Approved'}
+          </span>
+        );
+      case 'rejected':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-300/40">
+            <XCircle className="w-3.5 h-3.5" />
+            {isBn ? 'বাতিলকৃত (Rejected)' : 'Rejected'}
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-300/40">
+            <Clock className="w-3.5 h-3.5 animate-pulse" />
+            {isBn ? 'যাচাই প্রক্রিয়াধীন (Pending)' : 'Pending Verification'}
+          </span>
+        );
+    }
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-8">
-      {/* Search Bar Input */}
-      <form onSubmit={onFormSubmit} className="relative print:hidden">
-        <div className="flex items-center gap-2">
-          <div className="relative grow">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={dict.track.searchPlaceholder}
-              className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm shadow-xs"
-            />
-            <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isPending}
-            className="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-70 text-white font-bold text-sm shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2 shrink-0"
-          >
-            {isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="hidden sm:inline">খোঁজা হচ্ছে...</span>
-              </>
-            ) : (
-              <span>{dict.track.checkStatusBtn}</span>
-            )}
-          </button>
+    <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden print:shadow-none print:border-none">
+      {/* Top Banner Header */}
+      <div className="p-6 sm:p-8 bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
+            {isBn ? 'ট্র্যাকিং কোড' : 'Tracking Code'}
+          </span>
+          <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-wider">
+            {data.reg_code}
+          </span>
         </div>
-      </form>
+        <div>{renderStatusBadge()}</div>
+      </div>
 
-      {/* Error / Not Found Alert */}
-      {errorMessage && (
-        <div className="p-5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 flex items-start gap-3 text-rose-700 dark:text-rose-300 text-sm print:hidden">
-          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
-          <div>
-            <p className="font-bold">রেজিস্ট্রেশন পাওয়া যায়নি</p>
-            <p className="mt-0.5 text-xs text-rose-600 dark:text-rose-400">{errorMessage}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Record State Display */}
-      {record && (
-        <div className="space-y-6">
-          {/* Status 1: PENDING */}
-          {record.payment_status === 'pending' && (
-            <div className="p-6 rounded-3xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-center space-y-3">
-              <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/60 flex items-center justify-center mx-auto text-amber-700 dark:text-amber-300">
-                <Clock className="w-6 h-6 animate-pulse" />
-              </div>
-              <h3 className="text-lg font-black text-amber-900 dark:text-amber-200">
-                পেমেন্ট ভেরিফিকেশন প্রক্রিয়াধীন
-              </h3>
-              <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-300/80 max-w-md mx-auto leading-relaxed">
-                আপনার প্রদত্ত পেমেন্ট তথ্যটি (TrxID: {record.transaction_id || 'Cash'}) আমাদের সুপার অ্যাডমিন টিম যাচাই করছে। যাচাই সম্পন্ন হলে আপনার ইভেন্ট পাসটি এখানে প্রদর্শিত হবে।
+      {/* Details Grid */}
+      <div className="p-6 sm:p-8 space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          
+          {/* Full Name */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 flex items-start gap-3">
+            <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                {isBn ? 'অংশগ্রহণকারীর নাম' : 'Attendee Name'}
               </p>
-
-              <div className="pt-3 border-t border-amber-200 dark:border-amber-800 text-xs font-mono text-amber-800 dark:text-amber-300">
-                Registration Code: <span className="font-bold">{record.reg_code}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Status 2: REJECTED */}
-          {record.payment_status === 'rejected' && (
-            <div className="p-6 rounded-3xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-center space-y-3">
-              <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-900/60 flex items-center justify-center mx-auto text-rose-700 dark:text-rose-300">
-                <XCircle className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-black text-rose-900 dark:text-rose-200">
-                পেমেন্ট অনুমোদন বাতিল হয়েছে
-              </h3>
-              <p className="text-xs sm:text-sm text-rose-800 dark:text-rose-300/80 max-w-md mx-auto leading-relaxed">
-                আপনার প্রদত্ত লেনদেনের বিবরণে অসংগতি পাওয়ায় ভেরিফিকেশন বাতিল করা হয়েছে। সহায়তার জন্য অনুগ্রহ করে দ্বীনি কমিউনিটি হেল্পডেস্কে যোগাযোগ করুন।
+              <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
+                {data.full_name}
               </p>
             </div>
-          )}
+          </div>
 
-          {/* Status 3: APPROVED */}
-          {record.payment_status === 'approved' && (
-            <div className="space-y-6">
-              <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center gap-3 text-emerald-800 dark:text-emerald-300 text-xs sm:text-sm font-medium print:hidden">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span>পেমেন্ট অনুমোদিত হয়েছে! নিচে আপনার অফিসিয়াল ইভেন্ট পাস সংযুক্ত করা হলো।</span>
-              </div>
-
-              {/* Verified Pass Card Component */}
-              <EventPassCard registration={record} />
+          {/* Student ID */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 flex items-start gap-3">
+            <Hash className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                {isBn ? 'স্টুডেন্ট আইডি' : 'Student ID'}
+              </p>
+              <p className="text-sm font-bold font-mono text-slate-900 dark:text-white mt-0.5">
+                {data.student_id}
+              </p>
             </div>
-          )}
-        </div>
-      )}
+          </div>
 
-      {/* Default Informational Tip when no search query has been performed */}
-      {!record && !errorMessage && (
-        <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center text-xs text-slate-500 dark:text-slate-400 space-y-2">
-          <HelpCircle className="w-5 h-5 mx-auto text-slate-400" />
-          <p>রেজিস্ট্রেশনের পর প্রাপ্ত ট্র্যাকিং কোড (যেমন: KU-XXXXXX) অথবা আপনার স্টুডেন্ট আইডি দিয়ে স্ট্যাটাস ও ইভেন্ট পাস চেক করুন।</p>
+          {/* Discipline */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 flex items-start gap-3">
+            <GraduationCap className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                {isBn ? 'ডিসিপ্লিন' : 'Discipline'}
+              </p>
+              <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
+                {data.discipline || '29'}
+              </p>
+            </div>
+          </div>
+
+          {/* Fee & Payment Method */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 flex items-start gap-3">
+            <Receipt className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                {isBn ? 'নিবন্ধন ফি' : 'Registration Fee'}
+              </p>
+              <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
+                {data.fee_amount ? `${data.fee_amount} ৳` : 'N/A'}
+                {data.payment_method && (
+                  <span className="ml-2 text-xs font-normal text-slate-500">
+                    ({data.payment_method})
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+
         </div>
-      )}
+
+        {/* Dynamic Contextual Notices */}
+        {data.payment_status === 'pending' && (
+          <div className="p-4 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="text-xs sm:text-sm text-amber-800 dark:text-amber-300 leading-relaxed space-y-1">
+              <p className="font-bold">
+                {isBn ? 'পেমেন্ট যাচাইকরণ প্রক্রিয়াধীন' : 'Payment Verification In Progress'}
+              </p>
+              <p className="text-xs text-amber-700/90 dark:text-amber-400/90">
+                {isBn
+                  ? 'আপনার প্রদত্ত ট্রানজেকশন আইডি বা অ্যাম্বাসেডর তথ্য অ্যাডমিন প্যানেল থেকে যাচাই করা হচ্ছে। অনুমোদন সম্পন্ন হলে এই পৃষ্ঠাতেই আপনার প্রবেশ পাসটি প্রদর্শিত হবে।'
+                  : 'Your transaction details are currently being verified by the team. Once verified, your entry pass with QR code will appear here.'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {data.payment_status === 'rejected' && (
+          <div className="p-4 rounded-2xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 flex items-start gap-3">
+            <XCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+            <div className="text-xs sm:text-sm text-rose-800 dark:text-rose-300 leading-relaxed space-y-1">
+              <p className="font-bold">
+                {isBn ? 'পেমেন্ট অনুমোদন বাতিল করা হয়েছে' : 'Registration Payment Rejected'}
+              </p>
+              <p className="text-xs text-rose-700/90 dark:text-rose-400/90">
+                {isBn
+                  ? 'আপনার দেওয়া ট্রানজেকশন বা পেমেন্ট তথ্যে অসঙ্গতি পাওয়া গিয়েছে। সমস্যা সমাধানে অনুগ্রহ করে ইভেন্ট হেল্পডেস্ক বা অ্যাম্বাসেডরের সাথে যোগাযোগ করুন।'
+                  : 'An issue was encountered while verifying your transaction. Please get in touch with the event organizers or your ambassador for assistance.'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {data.payment_status === 'approved' && (
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+              <ShieldCheck className="w-5 h-5" />
+              <span>
+                {isBn ? 'ইভেন্ট ভেন্যু প্রবেশাধিকার সক্রিয়' : 'Event Entry Access Authorized'}
+              </span>
+            </div>
+            
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 dark:text-slate-900 text-white text-xs font-bold transition shadow"
+            >
+              <Printer className="w-4 h-4" />
+              <span>{isBn ? 'পাস প্রিন্ট করুন' : 'Print Pass'}</span>
+            </button>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }
