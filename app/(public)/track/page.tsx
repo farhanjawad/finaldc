@@ -1,215 +1,261 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useTransition } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
-import { Search, Camera, CameraOff, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
-import { trackRegistration } from '@/app/actions/track';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { trackRegistration, TrackResult } from '@/app/actions/track';
+import { useLanguage } from '@/app/context/LanguageContext';
+import {
+  Search,
+  Loader2,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  Printer,
+  QrCode,
+  AlertCircle
+} from 'lucide-react';
 
-interface GateScannerViewProps {
-  onCheckIn?: (code: string) => Promise<any>;
-}
+function TrackContent() {
+  const { language } = useLanguage();
+  const searchParams = useSearchParams();
+  const initialCode = searchParams.get('code') || '';
 
-export default function GateScannerView({ onCheckIn }: GateScannerViewProps) {
-  const [scannerActive, setScannerActive] = useState(false);
-  const [manualCode, setManualCode] = useState('');
-  const [scanResult, setScanResult] = useState<any>(null);
-  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error' | 'warning'; text: string } | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [searchInput, setSearchInput] = useState(initialCode);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [result, setResult] = useState<TrackResult | null>(null);
 
-  const scannerRef = useRef<Html5Qrcode | null>(null);
-  const scannerContainerId = 'reader-container';
+  const executeTrack = async (query: string) => {
+    const cleanInput = query.trim();
+    if (!cleanInput) return;
 
-  const processCheckIn = (code: string) => {
-    const cleanCode = code.trim();
-    if (!cleanCode) return;
+    setLoading(true);
+    setErrorMsg(null);
+    setResult(null);
 
-    setStatusMessage(null);
-    startTransition(async () => {
-      try {
-        if (onCheckIn) {
-          const res = await onCheckIn(cleanCode);
-          if (res?.success) {
-            setStatusMessage({ type: 'success', text: `চেক-ইন সফল: ${cleanCode}` });
-            setScanResult(res.data ?? null);
-          } else {
-            setStatusMessage({ type: 'error', text: res?.error ?? 'চেক-ইন ব্যর্থ হয়েছে।' });
-          }
-        } else {
-          const res = await trackRegistration(cleanCode);
-          if (res.success && res.data) {
-            setScanResult(res.data);
-            if (res.data.checked_in) {
-              setStatusMessage({ type: 'warning', text: 'এই পাসটি ইতিমধ্যে ব্যবহার করা হয়েছে!' });
-            } else if (res.data.payment_status !== 'approved') {
-              setStatusMessage({ type: 'error', text: 'পেমেন্ট অনুমোদিত নয়!' });
-            } else {
-              setStatusMessage({ type: 'success', text: `যাচাই সম্পন্ন: ${res.data.full_name}` });
-            }
-          } else {
-            setStatusMessage({ type: 'error', text: res.error ?? 'কোনো রেকর্ড পাওয়া যায়নি।' });
-          }
-        }
-      } catch (err: any) {
-        setStatusMessage({ type: 'error', text: err?.message || 'যাচাইকরণে সমস্যা হয়েছে।' });
-      }
-    });
-  };
-
-  const startScanner = async () => {
     try {
-      if (!scannerRef.current) {
-        scannerRef.current = new Html5Qrcode(scannerContainerId);
+      const res = await trackRegistration(cleanInput);
+      if (res.success && res.data) {
+        setResult(res.data);
+      } else {
+        setErrorMsg(
+          res.error ??
+            (language === 'bn'
+              ? 'কোনো তথ্য খুঁজে পাওয়া যায়নি।'
+              : 'No matching record found.')
+        );
       }
-
-      const config = {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0,
-      };
-
-      // 4 arguments provided: camera facingMode, config, onScanSuccess, onScanFailure
-      await scannerRef.current.start(
-        { facingMode: 'environment' },
-        config,
-        (decodedText) => {
-          let parsedCode = decodedText;
-          if (decodedText.includes('/track/')) {
-            const parts = decodedText.split('/track/');
-            parsedCode = parts[parts.length - 1].replace(/[^a-zA-Z0-9_-]/g, '');
-          }
-          processCheckIn(parsedCode);
-        },
-        () => {
-          // ignore frame scan misses
-        }
+    } catch {
+      setErrorMsg(
+        language === 'bn'
+          ? 'সার্ভার সংযোগে ত্রুটি হয়েছে।'
+          : 'Failed to connect to the server.'
       );
-
-      setScannerActive(true);
-    } catch (err) {
-      console.error('Camera start error:', err);
-      setStatusMessage({ type: 'error', text: 'ক্যামেরা চালু করা সম্ভব হয়নি। পারমিশন চেক করুন।' });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const stopScanner = async () => {
-    if (scannerRef.current && scannerRef.current.isScanning) {
-      try {
-        await scannerRef.current.stop();
-        setScannerActive(false);
-      } catch (err) {
-        console.error('Camera stop error:', err);
-      }
-    }
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    executeTrack(searchInput);
   };
 
   useEffect(() => {
-    return () => {
-      if (scannerRef.current && scannerRef.current.isScanning) {
-        scannerRef.current.stop().catch(console.error);
-      }
-    };
-  }, []);
+    if (initialCode) {
+      executeTrack(initialCode);
+    }
+  }, [initialCode]);
 
-  const handleManualSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    processCheckIn(manualCode);
+  const getStatusBadge = (status: TrackResult['payment_status'], isCheckedIn: boolean) => {
+    if (isCheckedIn) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-300/30">
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          {language === 'bn' ? 'উপস্থিত (Checked-In)' : 'Checked-In'}
+        </span>
+      );
+    }
+
+    switch (status) {
+      case 'approved':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-300/30">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            {language === 'bn' ? 'অনুমোদিত (Approved)' : 'Approved'}
+          </span>
+        );
+      case 'rejected':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-300/30">
+            <XCircle className="w-3.5 h-3.5" />
+            {language === 'bn' ? 'বাতিলকৃত (Rejected)' : 'Rejected'}
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-300/30">
+            <Clock className="w-3.5 h-3.5" />
+            {language === 'bn' ? 'যাচাই প্রক্রিয়াধীন (Pending)' : 'Pending Verification'}
+          </span>
+        );
+    }
   };
 
   return (
-    <div className="max-w-xl mx-auto space-y-6">
-      {/* Scanner Card */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-            <Camera className="w-5 h-5 text-emerald-600" />
-            গেট কিউআর স্ক্যানার
-          </h2>
-          <button
-            type="button"
-            onClick={scannerActive ? stopScanner : startScanner}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-              scannerActive
-                ? 'bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-950 dark:text-rose-300'
-                : 'bg-emerald-600 text-white hover:bg-emerald-700'
-            }`}
-          >
-            {scannerActive ? (
-              <>
-                <CameraOff className="w-4 h-4" /> ক্যামেরা বন্ধ করুন
-              </>
-            ) : (
-              <>
-                <Camera className="w-4 h-4" /> ক্যামেরা চালু করুন
-              </>
-            )}
-          </button>
+    <main className="min-h-screen py-10 md:py-16 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6">
+
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            {language === 'bn' ? 'রেজিস্ট্রেশন ও পাস ট্র্যাকিং' : 'Track Registration & Pass'}
+          </h1>
+          <p className="mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+            {language === 'bn'
+              ? 'আপনার রেজিস্ট্রেশন কোড অথবা স্টুডেন্ট আইডি দিয়ে স্ট্যাটাস যাচাই করুন।'
+              : 'Enter your registration code or student ID to check status.'}
+          </p>
         </div>
 
-        {/* Viewfinder element */}
-        <div
-          id={scannerContainerId}
-          className={`overflow-hidden rounded-2xl bg-black transition-all ${
-            scannerActive ? 'min-h-70' : 'h-0'
-          }`}
-        />
-
-        {/* Manual Input Form */}
-        <form onSubmit={handleManualSubmit} className="mt-6 flex gap-2">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+        {/* Search Bar */}
+        <form onSubmit={handleSearch} className="mb-8">
+          <div className="relative flex items-center">
             <input
               type="text"
-              value={manualCode}
-              onChange={(e) => setManualCode(e.target.value)}
-              placeholder="আইডি বা কোড লিখুন..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder={language === 'bn' ? 'রেজিস্ট্রেশন কোড বা স্টুডেন্ট আইডি...' : 'e.g. KU-32CBB5 or 261815'}
+              className="w-full px-4 py-3.5 pl-11 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+              required
             />
+            <Search className="w-5 h-5 text-slate-400 absolute left-3.5" />
+            <button
+              type="submit"
+              disabled={loading}
+              className="absolute right-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>{language === 'bn' ? 'খোঁজা হচ্ছে...' : 'Searching...'}</span>
+                </>
+              ) : (
+                <span>{language === 'bn' ? 'যাচাই করুন' : 'Verify'}</span>
+              )}
+            </button>
           </div>
-          <button
-            type="submit"
-            disabled={isPending || !manualCode.trim()}
-            className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 dark:text-slate-900 text-white text-xs font-bold transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
-          >
-            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'চেক-ইন'}
-          </button>
         </form>
 
-        {/* Status Feedback Alerts */}
-        {statusMessage && (
-          <div
-            className={`mt-4 p-4 rounded-2xl text-xs sm:text-sm flex items-center gap-2.5 ${
-              statusMessage.type === 'success'
-                ? 'bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300'
-                : statusMessage.type === 'warning'
-                ? 'bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-300'
-                : 'bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300'
-            }`}
-          >
-            {statusMessage.type === 'success' && <CheckCircle2 className="w-5 h-5 shrink-0" />}
-            {statusMessage.type === 'warning' && <AlertTriangle className="w-5 h-5 shrink-0" />}
-            {statusMessage.type === 'error' && <AlertTriangle className="w-5 h-5 shrink-0" />}
-            <span className="font-semibold">{statusMessage.text}</span>
+        {/* Error Notification */}
+        {errorMsg && (
+          <div className="p-4 mb-6 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+            <p className="text-xs sm:text-sm text-rose-700 dark:text-rose-300 font-medium">
+              {errorMsg}
+            </p>
           </div>
         )}
-      </div>
 
-      {/* Scanned Result Card */}
-      {scanResult && (
-        <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm space-y-2 text-xs sm:text-sm">
-          <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-2">
-            <span className="text-slate-400">নাম:</span>
-            <span className="font-bold text-slate-800 dark:text-slate-100">{scanResult.full_name}</span>
+        {/* Result Card */}
+        {result && (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden print:shadow-none print:border-none">
+
+            {/* Top Bar / Status */}
+            <div className="p-6 sm:p-8 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <span className="text-[11px] font-bold text-slate-400 tracking-wider uppercase block mb-1">
+                  {language === 'bn' ? 'ট্র্যাকিং কোড' : 'Registration Code'}
+                </span>
+                <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 tracking-wider font-mono">
+                  {result.reg_code}
+                </span>
+              </div>
+              <div>{getStatusBadge(result.payment_status, result.checked_in)}</div>
+            </div>
+
+            {/* Attendee Details Grid */}
+            <div className="p-6 sm:p-8 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-[11px] text-slate-400 block font-medium">
+                    {language === 'bn' ? 'নাম' : 'Name'}
+                  </span>
+                  <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                    {result.full_name}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-400 block font-medium">
+                    {language === 'bn' ? 'স্টুডেন্ট আইডি' : 'Student ID'}
+                  </span>
+                  <span className="text-sm sm:text-base font-bold font-mono text-slate-900 dark:text-white">
+                    {result.student_id}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-400 block font-medium">
+                    {language === 'bn' ? 'ডিসিপ্লিন' : 'Discipline'}
+                  </span>
+                  <span className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    {result.discipline || '29'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-400 block font-medium">
+                    {language === 'bn' ? 'ফি পরিমাণ' : 'Fee Amount'}
+                  </span>
+                  <span className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    {result.fee_amount ? `${result.fee_amount} ৳` : 'N/A'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Status Specific Message & Actions */}
+              {result.payment_status === 'pending' && (
+                <div className="mt-6 p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-xs sm:text-sm text-amber-800 dark:text-amber-300 leading-relaxed">
+                  {language === 'bn'
+                    ? 'আপনার পেমেন্ট ভেরিফিকেশন এখনও সম্পন্ন হয়নি। ভেরিফিকেশন সম্পন্ন হলে আপনার ডিজিটাল পাসটি প্রদর্শিত হবে।'
+                    : 'Your payment verification is in progress. The official pass will be unlocked once approved by the administrators.'}
+                </div>
+              )}
+
+              {result.payment_status === 'approved' && (
+                <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                    <QrCode className="w-5 h-5" />
+                    <span>{language === 'bn' ? 'ইভেন্ট ভেন্যু পাস সক্রিয়' : 'Official Entry Pass Active'}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 dark:text-slate-900 text-white text-xs font-bold transition shadow-xs cursor-pointer"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>{language === 'bn' ? 'পাস প্রিন্ট করুন' : 'Print Pass'}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
           </div>
-          <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-2">
-            <span className="text-slate-400">স্টুডেন্ট আইডি:</span>
-            <span className="font-mono font-bold">{scanResult.student_id}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-slate-400">রেজিস্ট্রেশন কোড:</span>
-            <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{scanResult.reg_code}</span>
-          </div>
+        )}
+
+      </div>
+    </main>
+  );
+}
+
+export default function TrackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
         </div>
-      )}
-    </div>
+      }
+    >
+      <TrackContent />
+    </Suspense>
   );
 }
