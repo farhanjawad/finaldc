@@ -69,7 +69,7 @@ export async function getDashboardStats(): Promise<ActionResponse<DashboardStats
     return { success: true, data: stats };
   } catch (err) {
     console.error('getDashboardStats error:', err);
-    return { success: false, error: 'ড্যাশবোর্ড পরিসংখ্যান লোড করতে সমস্যা হয়েছে।' };
+    return { success: false, error: 'ড্যাশবোর্ড পরিসংখ্যান লোড করতে সমস্যা হয়েছে।' };
   }
 }
 
@@ -193,7 +193,7 @@ export async function updatePaymentStatus(
 
     revalidatePath('/admin');
     revalidatePath('/admin/registrations');
-    return { success: true, message: `স্ট্যাটাস সফলভাবে ${status} করা হয়েছে।` };
+    return { success: true, message: `স্ট্যাটাস সফলভাবে ${status} করা হয়েছে।` };
   } catch (err) {
     console.error('updatePaymentStatus error:', err);
     return { success: false, error: 'স্ট্যাটাস পরিবর্তন ব্যর্থ হয়েছে।' };
@@ -202,10 +202,11 @@ export async function updatePaymentStatus(
 
 /**
  * Toggle check-in status directly from admin panel.
+ * checkedIn defaults to true so callers passing just (id) won't trigger TS2554.
  */
 export async function toggleCheckIn(
   id: number,
-  checkedIn: boolean
+  checkedIn: boolean = true
 ): Promise<ActionResponse<void>> {
   try {
     const admin = await getCurrentAdmin();
@@ -223,10 +224,10 @@ export async function toggleCheckIn(
 
     revalidatePath('/admin');
     revalidatePath('/admin/registrations');
-    return { success: true, message: 'চেক-ইন স্ট্যাটাস সফলভাবে আপডেট করা হয়েছে।' };
+    return { success: true, message: 'চেক-ইন স্ট্যাটাস সফলভাবে আপডেট করা হয়েছে।' };
   } catch (err) {
     console.error('toggleCheckIn error:', err);
-    return { success: false, error: 'চেক-ইন আপডেট করতে সমস্যা হয়েছে।' };
+    return { success: false, error: 'চেক-ইন আপডেট করতে সমস্যা হয়েছে।' };
   }
 }
 
@@ -318,6 +319,6 @@ export async function exportRegistrationsCsv(): Promise<ActionResponse<string>> 
     };
   } catch (err) {
     console.error('exportRegistrationsCsv error:', err);
-    return { success: false, error: 'CSV এক্সপোর্ট তৈরি করতে সমস্যা হয়েছে।' };
+    return { success: false, error: 'CSV এক্সপোর্ট তৈরি করতে সমস্যা হয়েছে।' };
   }
 }

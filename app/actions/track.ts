@@ -18,9 +18,11 @@ export interface TrackResult {
   created_at?: string;
 }
 
-export type TrackResponse =
-  | { success: true; data: TrackResult }
-  | { success: false; error: string };
+export interface TrackResponse {
+  success: boolean;
+  data?: TrackResult;
+  error?: string;
+}
 
 export async function trackRegistration(queryInput: string): Promise<TrackResponse> {
   try {
@@ -68,7 +70,7 @@ export async function trackRegistration(queryInput: string): Promise<TrackRespon
       console.warn(`[TRACK NOT FOUND] No record matched for: "${normalized}"`);
       return {
         success: false,
-        error: `"${rawInput}" নম্বরে কোনো নিবন্ধন খুঁজে পাওয়া যায়নি। আপনার ট্র্যাকিং কোড বা স্টুডেন্ট আইডি সঠিকভাবে দেওয়া হয়েছে কিনা নিশ্চিত করুন।`,
+        error: `"${rawInput}" নম্বরে কোনো নিবন্ধন খুঁজে পাওয়া যায়নি। আপনার ট্র্যাকিং কোড বা স্টুডেন্ট আইডি সঠিকভাবে দেওয়া হয়েছে কিনা নিশ্চিত করুন।`,
       };
     }
 
@@ -83,7 +85,7 @@ export async function trackRegistration(queryInput: string): Promise<TrackRespon
     console.error('🔥 [CRITICAL DB ERROR IN trackRegistration]:', error);
     return {
       success: false,
-      error: `ডাটাবেজ সংযোগে সমস্যা হয়েছে (${error?.message || 'Server error'})। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।`,
+      error: `ডাটাবেজ সংযোগে সমস্যা হয়েছে (${error?.message || 'Server error'})। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।`,
     };
   }
 }

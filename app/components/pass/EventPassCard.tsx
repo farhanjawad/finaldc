@@ -1,139 +1,175 @@
 'use client';
 
-import React from 'react';
-import { QRCodeSVG } from 'qrcode.react';
-import { RegistrationRecord } from '../../lib/types';
-import { Printer, CheckCircle2, ShieldCheck, MapPin, Calendar } from 'lucide-react';
+import React, { useState, useEffect, useTransition } from 'react';
+import { trackRegistration } from '@/app/actions/track';
+import { RegistrationRecord } from '@/app/lib/types';
+import EventTicket from '@/app/components/pass/EventTicket';
+import PendingStatusCard from '../pass/PendingStatusCard';
+import { 
+  Search, 
+  Loader2, 
+  AlertCircle, 
+  Ticket, 
+  User, 
+  Hash, 
+  GraduationCap, 
+  DollarSign, 
+  Clock, 
+  CheckCircle2, 
+  XCircle 
+} from 'lucide-react';
 
-interface EventPassCardProps {
-  registration: RegistrationRecord;
+interface TrackStatusViewProps {
+  initialCode?: string;
+  dict?: any;
 }
 
-export default function EventPassCard({ registration }: EventPassCardProps) {
-  const handlePrint = () => {
-    window.print();
+export default function TrackStatusView({ initialCode = '', dict }: TrackStatusViewProps) {
+  const [code, setCode] = useState(initialCode);
+  const [record, setRecord] = useState<RegistrationRecord | any | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const handleLookup = (lookupCode: string) => {
+    const cleanCode = lookupCode.trim();
+    if (!cleanCode) return;
+
+    setErrorMessage(null);
+    setRecord(null);
+
+    startTransition(async () => {
+      const res = await trackRegistration(cleanCode);
+      if (res.success && res.data) {
+        setRecord(res.data);
+      } else {
+        setErrorMessage(res.error || 'রেজিস্ট্রেশন তথ্য পাওয়া যায়নি। অনুগ্রহ করে কোডটি পুনরায় যাচাই করুন।');
+      }
+    });
   };
 
-  // QR code encodes the verification endpoint URL for gate check-in volunteers
-  const qrValue = `${typeof window !== 'undefined' ? window.location.origin : ''}/verify/${registration.reg_code}`;
+  useEffect(() => {
+    if (initialCode) {
+      handleLookup(initialCode);
+    }
+  }, [initialCode]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleLookup(code);
+  };
 
   return (
-    <div className="w-full max-w-md mx-auto flex flex-col items-center">
-      {/* Printable Ticket Pass Container */}
-      <div 
-        id="printable-pass"
-        className="w-full bg-white dark:bg-slate-900 border-2 border-emerald-600/30 rounded-3xl overflow-hidden shadow-2xl transition-all print:border-slate-800 print:shadow-none print:text-black print:bg-white"
-      >
-        {/* Pass Header Banner */}
-        <div className="bg-linear-to-r from-emerald-800 to-emerald-700 text-white p-6 text-center relative">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/15 backdrop-blur-xs mb-2 text-emerald-100">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>অফিসিয়াল ইভেন্ট পাস / Official Pass</span>
+    <div className="max-w-2xl mx-auto space-y-8">
+      {/* Search Input Box */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <Ticket className="w-5 h-5" />
           </div>
-          <h2 className="text-xl font-black tracking-tight">
-            দ্বীনের পথে, নবীনদের সাথে ২.০
-          </h2>
-          <p className="text-xs text-emerald-100 mt-1">
-            খুলনা বিশ্ববিদ্যালয় দ্বীনি কমিউনিটি
-          </p>
-
-          {/* Decorative Notch Punch-outs */}
-          <div className="absolute -bottom-3 -left-3 w-6 h-6 bg-slate-50 dark:bg-slate-950 rounded-full print:hidden" />
-          <div className="absolute -bottom-3 -right-3 w-6 h-6 bg-slate-50 dark:bg-slate-950 rounded-full print:hidden" />
+          <div>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+              রেজিস্ট্রেশন ট্র্যাকিং ও পাস
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              আপনার ট্র্যাকিং কোড বা স্টুডেন্ট আইডি দিয়ে স্ট্যাটাস যাচাই করুন
+            </p>
+          </div>
         </div>
 
-        {/* Pass Body */}
-        <div className="p-6 space-y-6">
-          
-          {/* QR Code Section */}
-          <div className="flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 print:bg-white print:border-slate-300">
-            <div className="p-3 bg-white rounded-xl shadow-xs">
-              <QRCodeSVG
-                value={qrValue}
-                size={160}
-                level="H"
-                includeMargin={false}
-              />
-            </div>
-            <div className="mt-3 text-center">
-              <p className="text-xs font-mono uppercase tracking-widest text-slate-400">
-                Tracking Code
-              </p>
-              <p className="text-xl font-mono font-black text-slate-900 dark:text-white mt-0.5">
-                {registration.reg_code}
-              </p>
-            </div>
+        <form onSubmit={handleSubmit} className="flex gap-2.5">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+            <input
+              type="text"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="উদাঃ KU-26-XXXX অথবা স্টুডেন্ট আইডি"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+            />
           </div>
+          <button
+            type="submit"
+            disabled={isPending || !code.trim()}
+            className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 dark:text-slate-900 text-white text-xs sm:text-sm font-bold transition disabled:opacity-50 flex items-center gap-2 shrink-0 cursor-pointer"
+          >
+            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'যাচাই করুন'}
+          </button>
+        </form>
 
-          {/* Participant Credentials */}
-          <div className="grid grid-cols-2 gap-4 text-xs sm:text-sm">
-            <div>
-              <p className="text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
-                অংশগ্রহণকারী / Name
-              </p>
-              <p className="font-bold text-slate-800 dark:text-white mt-0.5 truncate">
-                {registration.full_name}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
-                স্টুডেন্ট আইডি / Student ID
-              </p>
-              <p className="font-mono font-bold text-slate-800 dark:text-white mt-0.5">
-                {registration.student_id}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
-                ডিসিপ্লিন / Discipline
-              </p>
-              <p className="font-medium text-slate-700 dark:text-slate-200 mt-0.5 truncate">
-                {registration.discipline}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
-                ব্যাচ / Batch
-              </p>
-              <p className="font-mono font-medium text-slate-700 dark:text-slate-200 mt-0.5">
-                Batch {registration.batch_year || 'N/A'}
-              </p>
-            </div>
+        {errorMessage && (
+          <div className="mt-4 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs sm:text-sm flex items-center gap-2.5">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{errorMessage}</span>
           </div>
-
-          {/* Event Details Footer Bar */}
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-              ১২ সেপ্টেম্বর, ২:০০ PM
-            </span>
-            <span className="flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-indigo-600" />
-              কেন্দ্রীয় মসজিদ, খুবি
-            </span>
-          </div>
-
-          {/* Verified Badge Indicator */}
-          <div className="flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-semibold text-xs border border-emerald-200 dark:border-emerald-800">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>পেমেন্ট ভেরিফাইড (প্রবেশের জন্য প্রযোজ্য)</span>
-          </div>
-
-        </div>
+        )}
       </div>
 
-      {/* Print Action Trigger (Hidden in Print View) */}
-      <button
-        onClick={handlePrint}
-        type="button"
-        className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 font-bold text-xs sm:text-sm shadow-lg transition-all print:hidden"
-      >
-        <Printer className="w-4 h-4" />
-        <span>ইভেন্ট পাস প্রিন্ট / ডাউনলোড করুন</span>
-      </button>
+      {/* Dynamic Results Display */}
+      {record && (
+        <div className="space-y-6">
+          {/* Summary Card */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                  রেজিস্ট্রেশন নম্বর
+                </span>
+                <span className="text-xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                  {record.reg_code}
+                </span>
+              </div>
+
+              {/* Status Badge */}
+              <div>
+                {record.payment_status === 'approved' ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    অনুমোদিত (পাস সক্রিয়)
+                  </span>
+                ) : record.payment_status === 'rejected' ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300">
+                    <XCircle className="w-3.5 h-3.5" />
+                    বাতিল করা হয়েছে
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300">
+                    <Clock className="w-3.5 h-3.5" />
+                    যাচাই প্রক্রিয়াধীন (বকেয়া)
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-xs sm:text-sm mt-5">
+              <div className="flex items-center gap-2.5 text-slate-700 dark:text-slate-300">
+                <User className="w-4 h-4 text-slate-400 shrink-0" />
+                <span className="font-semibold truncate">{record.full_name}</span>
+              </div>
+              <div className="flex items-center gap-2.5 text-slate-700 dark:text-slate-300">
+                <Hash className="w-4 h-4 text-slate-400 shrink-0" />
+                <span className="font-mono">{record.student_id}</span>
+              </div>
+              <div className="flex items-center gap-2.5 text-slate-700 dark:text-slate-300">
+                <GraduationCap className="w-4 h-4 text-slate-400 shrink-0" />
+                <span>ডিসিপ্লিন: {record.discipline || '29'}</span>
+              </div>
+              <div className="flex items-center gap-2.5 text-slate-700 dark:text-slate-300">
+                <DollarSign className="w-4 h-4 text-slate-400 shrink-0" />
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  {record.fee_amount || 0} ৳
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Conditional Ticket or Pending View */}
+          {record.payment_status === 'approved' ? (
+            <EventTicket attendee={record} dict={dict} />
+          ) : (
+            <PendingStatusCard attendee={record} dict={dict} />
+          )}
+        </div>
+      )}
     </div>
   );
 }

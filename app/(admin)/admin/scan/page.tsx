@@ -1,7 +1,7 @@
 import React from 'react';
 import GateScannerView from '@/app/components/admin/GateScannerView';
 import { QrCode } from 'lucide-react';
-
+export const dynamic = 'force-dynamic';
 export const metadata = {
   title: 'গেট চেক-ইন স্ক্যানার | KU Deeni Admin',
   description: 'ইভেন্ট গেটে অংশগ্রহণকারীদের QR কোড যাচাই এবং ডিজিটাল হাজিরা গ্রহণ পোর্টাল',

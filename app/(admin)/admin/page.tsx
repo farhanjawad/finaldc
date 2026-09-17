@@ -10,7 +10,7 @@ import {
   QrCode,
   AlertCircle 
 } from 'lucide-react';
-
+export const dynamic = 'force-dynamic';
 export const metadata = {
   title: 'ড্যাশবোর্ড ওভারভিউ | KU Deeni Admin',
 };

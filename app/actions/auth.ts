@@ -80,7 +80,10 @@ export async function loginAdmin(
         role: admin.role,
       },
     };
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.digest?.includes('DYNAMIC_SERVER_USAGE') || err?.digest?.includes('NEXT_REDIRECT')) {
+      throw err;
+    }
     console.error('Admin login error:', err);
     return {
       success: false,
@@ -90,12 +93,13 @@ export async function loginAdmin(
 }
 
 export async function getCurrentAdmin(): Promise<AdminUser | null> {
+  // Read cookies outside try-catch so Next.js can switch to dynamic rendering without logging a false error
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+
+  if (!token) return null;
+
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-
-    if (!token) return null;
-
     const rows = await sql`
       SELECT 
         a.id, 
@@ -112,7 +116,10 @@ export async function getCurrentAdmin(): Promise<AdminUser | null> {
     if (rows.length === 0) return null;
 
     return rows[0] as AdminUser;
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.digest?.includes('DYNAMIC_SERVER_USAGE')) {
+      throw err;
+    }
     console.error('Session retrieval error:', err);
     return null;
   }
@@ -131,7 +138,10 @@ export async function logoutAdmin(): Promise<void> {
     }
 
     cookieStore.delete(SESSION_COOKIE_NAME);
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.digest?.includes('DYNAMIC_SERVER_USAGE')) {
+      throw err;
+    }
     console.error('Logout error:', err);
   }
 }
