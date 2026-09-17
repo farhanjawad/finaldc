@@ -25,8 +25,6 @@ export default function Navbar() {
 
   const navLinks = [
     { href: '/', label: language === 'bn' ? 'মূলপাতা' : 'Home' },
-    { href: '/register', label: language === 'bn' ? 'নিবন্ধন' : 'Register' },
-    { href: '/track', label: language === 'bn' ? 'পাস অনুসন্ধান' : 'Track Pass' },
   ];
 
   return (

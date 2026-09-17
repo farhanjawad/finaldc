@@ -28,12 +28,13 @@ export const KU_DISCIPLINES = [
   'Education',
   'Drawing and Painting',
   'Printmaking',
-  'Sculpture'
+  'Sculpture',
+  'other '
 ] as const;
 
 export type DisciplineType = typeof KU_DISCIPLINES[number];
 
-export type Gender = 'male' | 'female' ;
+export type Gender = 'male' | 'female';
 export type PaymentMethod = 'bkash' | 'nagad' | 'ambassador';
 export type PaymentStatus = 'pending' | 'approved' | 'rejected';
 

@@ -23,6 +23,8 @@ export interface RegistrationsFilterParams {
   status?: PaymentStatus | 'all';
   discipline?: string;
   batch?: string;
+  paymentMethod?: string;
+  gender?: string;
   checkedIn?: 'all' | 'true' | 'false';
   page?: number;
   limit?: number;
@@ -93,10 +95,12 @@ export async function getRegistrations(
     const statusFilter = params.status && params.status !== 'all' ? params.status : null;
     const disciplineFilter = params.discipline && params.discipline !== 'all' ? params.discipline : null;
     const batchFilter = params.batch && params.batch !== 'all' ? params.batch : null;
+    const methodFilter = params.paymentMethod && params.paymentMethod !== 'all' ? params.paymentMethod : null;
+    const genderFilter = params.gender && params.gender !== 'all' ? params.gender : null;
     const checkedInFilter =
       params.checkedIn === 'true' ? true : params.checkedIn === 'false' ? false : null;
 
-    // Total count query matching applied filters
+    // Total count query with all filter conditions
     const countRows = await sql`
       SELECT COUNT(*)::int AS count
       FROM registrations
@@ -108,9 +112,11 @@ export async function getRegistrations(
           phone ILIKE ${searchPattern} OR
           transaction_id ILIKE ${searchPattern}
         ))
-        AND (${statusFilter}::text IS NULL OR payment_status = ${statusFilter})
+        AND (${statusFilter}::text IS NULL OR payment_status = ${statusFilter}::payment_status_enum)
         AND (${disciplineFilter}::text IS NULL OR discipline = ${disciplineFilter})
         AND (${batchFilter}::text IS NULL OR batch_year = ${batchFilter})
+        AND (${methodFilter}::text IS NULL OR payment_method = ${methodFilter})
+        AND (${genderFilter}::text IS NULL OR gender = ${genderFilter})
         AND (${checkedInFilter}::boolean IS NULL OR checked_in = ${checkedInFilter});
     `;
 
@@ -148,9 +154,11 @@ export async function getRegistrations(
           phone ILIKE ${searchPattern} OR
           transaction_id ILIKE ${searchPattern}
         ))
-        AND (${statusFilter}::text IS NULL OR payment_status = ${statusFilter})
+        AND (${statusFilter}::text IS NULL OR payment_status = ${statusFilter}::payment_status_enum)
         AND (${disciplineFilter}::text IS NULL OR discipline = ${disciplineFilter})
         AND (${batchFilter}::text IS NULL OR batch_year = ${batchFilter})
+        AND (${methodFilter}::text IS NULL OR payment_method = ${methodFilter})
+        AND (${genderFilter}::text IS NULL OR gender = ${genderFilter})
         AND (${checkedInFilter}::boolean IS NULL OR checked_in = ${checkedInFilter})
       ORDER BY created_at DESC
       LIMIT ${limit} OFFSET ${offset};

@@ -7,7 +7,7 @@ import {
   toggleCheckIn, 
   exportRegistrationsCsv 
 } from '@/app/actions/admin';
-import { RegistrationRecord, PaymentStatus } from '@/app/lib/types';
+import { RegistrationRecord, PaymentStatus, KU_DISCIPLINES } from '@/app/lib/types';
 import { 
   Search, 
   Download, 
@@ -18,7 +18,8 @@ import {
   ChevronLeft, 
   ChevronRight,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  RotateCcw
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -28,6 +29,8 @@ interface RegistrationsTableProps {
   currentPage: number;
   totalPages: number;
 }
+
+const BATCHES = ['21', '22', '23', '24', '25', '26'];
 
 export default function RegistrationsTable({
   initialData,
@@ -42,6 +45,14 @@ export default function RegistrationsTable({
   const [isPending, startTransition] = useTransition();
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [exporting, setExporting] = useState(false);
+
+  // Active filter values from URL
+  const currentStatus = searchParams.get('status') || 'all';
+  const currentDiscipline = searchParams.get('discipline') || 'all';
+  const currentBatch = searchParams.get('batch') || 'all';
+  const currentMethod = searchParams.get('paymentMethod') || 'all';
+  const currentGender = searchParams.get('gender') || 'all';
+  const currentCheckedIn = searchParams.get('checkedIn') || 'all';
 
   // Update query params in URL
   const updateQuery = (key: string, val: string) => {
@@ -60,6 +71,20 @@ export default function RegistrationsTable({
     updateQuery('search', searchTerm);
   };
 
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    router.push(pathname);
+  };
+
+  const hasActiveFilters = 
+    currentStatus !== 'all' ||
+    currentDiscipline !== 'all' ||
+    currentBatch !== 'all' ||
+    currentMethod !== 'all' ||
+    currentGender !== 'all' ||
+    currentCheckedIn !== 'all' ||
+    Boolean(searchParams.get('search'));
+
   const handleStatusChange = (id: number, status: PaymentStatus) => {
     startTransition(async () => {
       await updatePaymentStatus(id, status);
@@ -67,9 +92,9 @@ export default function RegistrationsTable({
     });
   };
 
-  const handleCheckInToggle = (id: number, currentStatus: boolean) => {
+  const handleCheckInToggle = (id: number, currentStatusVal: boolean) => {
     startTransition(async () => {
-      await toggleCheckIn(id, !currentStatus);
+      await toggleCheckIn(id, !currentStatusVal);
       router.refresh();
     });
   };
@@ -101,54 +126,134 @@ export default function RegistrationsTable({
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  const currentStatusFilter = searchParams.get('status') || 'all';
-
   return (
     <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
       
       {/* Table Toolbar */}
-      <div className="p-5 sm:p-6 border-b border-slate-200 dark:border-slate-800 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+      <div className="p-5 sm:p-6 border-b border-slate-200 dark:border-slate-800 space-y-4">
         
-        {/* Search Bar */}
-        <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="নাম, রোল, কোড, ফোন বা TrxID..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
-          />
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-        </form>
+        {/* Top Line: Search Bar + Export */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+          <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="নাম, রোল, কোড, ফোন বা TrxID..."
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+            />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          </form>
 
-        {/* Filters & Export Actions */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Status Select */}
+          <div className="flex items-center gap-2.5 self-end lg:self-auto">
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>ফিল্টার মুছুন</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleCsvExport}
+              disabled={exporting}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+            >
+              {exporting ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5" />
+              )}
+              <span>CSV Export</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Bottom Line: Multi-Attribute Filters */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+          
+          {/* Discipline Select */}
           <select
-            value={currentStatusFilter}
-            onChange={(e) => updateQuery('status', e.target.value)}
-            className="px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            value={currentDiscipline}
+            onChange={(e) => updateQuery('discipline', e.target.value)}
+            className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
-            <option value="all">সকল স্ট্যাটাস</option>
+            <option value="all">ডিসিপ্লিন: সকল</option>
+            {KU_DISCIPLINES && KU_DISCIPLINES.length > 0 ? (
+              KU_DISCIPLINES.map((disc) => (
+                <option key={disc} value={disc}>
+                  {disc}
+                </option>
+              ))
+            ) : (
+              <option value="29">29 (Default)</option>
+            )}
+          </select>
+
+          {/* Batch Select */}
+          <select
+            value={currentBatch}
+            onChange={(e) => updateQuery('batch', e.target.value)}
+            className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="all">ব্যাচ: সকল</option>
+            {BATCHES.map((b) => (
+              <option key={b} value={b}>
+                ব্যাচ {b}
+              </option>
+            ))}
+          </select>
+
+          {/* Payment Status Select */}
+          <select
+            value={currentStatus}
+            onChange={(e) => updateQuery('status', e.target.value)}
+            className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="all">স্ট্যাটাস: সকল</option>
             <option value="pending">Pending (অপেক্ষমাণ)</option>
             <option value="approved">Approved (অনুমোদিত)</option>
             <option value="rejected">Rejected (বাতিল)</option>
           </select>
 
-          {/* Export to CSV Button */}
-          <button
-            type="button"
-            onClick={handleCsvExport}
-            disabled={exporting}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition disabled:opacity-50"
+          {/* Payment Method Select */}
+          <select
+            value={currentMethod}
+            onChange={(e) => updateQuery('paymentMethod', e.target.value)}
+            className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
-            {exporting ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Download className="w-3.5 h-3.5" />
-            )}
-            <span>CSV Export</span>
-          </button>
+            <option value="all">পদ্ধতি: সকল</option>
+            <option value="bkash">বিকাশ (bKash)</option>
+            <option value="nagad">নগদ (Nagad)</option>
+            <option value="ambassador">অ্যাম্বাসেডর</option>
+          </select>
+
+          {/* Gender Select */}
+          <select
+            value={currentGender}
+            onChange={(e) => updateQuery('gender', e.target.value)}
+            className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="all">লিঙ্গ: সকল</option>
+            <option value="male">পুরুষ</option>
+            <option value="female">নারী</option>
+          </select>
+
+          {/* Check-In Select */}
+          <select
+            value={currentCheckedIn}
+            onChange={(e) => updateQuery('checkedIn', e.target.value)}
+            className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="all">চেক-ইন: সকল</option>
+            <option value="true">উপস্থিত</option>
+            <option value="false">অনুপস্থিত</option>
+          </select>
+
         </div>
       </div>
 
@@ -245,50 +350,50 @@ export default function RegistrationsTable({
                     )}
                   </td>
 
-                 {/* Check-In Toggle */}
-<td className="py-4 px-4 whitespace-nowrap">
-  <button
-    type="button"
-    disabled={isPending || reg.payment_status !== 'approved'}
-    onClick={() => handleCheckInToggle(Number(reg.id), reg.checked_in)}
-    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition ${
-      reg.checked_in
-        ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300'
-        : 'bg-slate-50 border-slate-200 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
-    } ${reg.payment_status !== 'approved' ? 'opacity-40 cursor-not-allowed' : 'hover:scale-105'}`}
-  >
-    <UserCheck className="w-3 h-3" />
-    <span>{reg.checked_in ? 'উপস্থিত' : 'অনুপস্থিত'}</span>
-  </button>
-</td>
+                  {/* Check-In Toggle */}
+                  <td className="py-4 px-4 whitespace-nowrap">
+                    <button
+                      type="button"
+                      disabled={isPending || reg.payment_status !== 'approved'}
+                      onClick={() => handleCheckInToggle(Number(reg.id), reg.checked_in)}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition ${
+                        reg.checked_in
+                          ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300'
+                          : 'bg-slate-50 border-slate-200 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
+                      } ${reg.payment_status !== 'approved' ? 'opacity-40 cursor-not-allowed' : 'hover:scale-105 cursor-pointer'}`}
+                    >
+                      <UserCheck className="w-3 h-3" />
+                      <span>{reg.checked_in ? 'উপস্থিত' : 'অনুপস্থিত'}</span>
+                    </button>
+                  </td>
 
-{/* Row Mutation Actions */}
-<td className="py-4 px-4 text-right whitespace-nowrap">
-  <div className="inline-flex items-center gap-1.5">
-    {reg.payment_status !== 'approved' && (
-      <button
-        type="button"
-        disabled={isPending}
-        onClick={() => handleStatusChange(Number(reg.id), 'approved')}
-        title="অনুমোদন করুন"
-        className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900 text-emerald-600 dark:text-emerald-400 transition"
-      >
-        <CheckCircle2 className="w-4 h-4" />
-      </button>
-    )}
-    {reg.payment_status !== 'rejected' && (
-      <button
-        type="button"
-        disabled={isPending}
-        onClick={() => handleStatusChange(Number(reg.id), 'rejected')}
-        title="বাতিল করুন"
-        className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900 text-rose-600 dark:text-rose-400 transition"
-      >
-        <XCircle className="w-4 h-4" />
-      </button>
-    )}
-  </div>
-</td>
+                  {/* Row Mutation Actions */}
+                  <td className="py-4 px-4 text-right whitespace-nowrap">
+                    <div className="inline-flex items-center gap-1.5">
+                      {reg.payment_status !== 'approved' && (
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          onClick={() => handleStatusChange(Number(reg.id), 'approved')}
+                          title="অনুমোদন করুন"
+                          className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900 text-emerald-600 dark:text-emerald-400 transition cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      {reg.payment_status !== 'rejected' && (
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          onClick={() => handleStatusChange(Number(reg.id), 'rejected')}
+                          title="বাতিল করুন"
+                          className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900 text-rose-600 dark:text-rose-400 transition cursor-pointer"
+                        >
+                          <XCircle className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))
             )}
@@ -306,7 +411,7 @@ export default function RegistrationsTable({
             type="button"
             disabled={currentPage <= 1 || isPending}
             onClick={() => handlePageChange(currentPage - 1)}
-            className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -317,7 +422,7 @@ export default function RegistrationsTable({
             type="button"
             disabled={currentPage >= totalPages || isPending}
             onClick={() => handlePageChange(currentPage + 1)}
-            className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
