@@ -26,6 +26,8 @@ export interface RegistrationsFilterParams {
   paymentMethod?: string;
   gender?: string;
   checkedIn?: 'all' | 'true' | 'false';
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
   page?: number;
   limit?: number;
 }
@@ -220,7 +222,7 @@ export async function verifyGateCheckIn(
 }
 
 /**
- * Fetch registrations with multi-attribute filtering, search, and pagination.
+ * Fetch registrations with multi-attribute filtering, search, dynamic sorting, and pagination.
  */
 export async function getRegistrations(
   params: RegistrationsFilterParams = {}
@@ -244,6 +246,10 @@ export async function getRegistrations(
     const checkedInFilter =
       params.checkedIn === 'true' ? true : params.checkedIn === 'false' ? false : null;
 
+    const isAsc = params.sortOrder === 'asc';
+    const sortBy = params.sortBy || 'created_at';
+
+    // 1. Total matching records count
     const countRows = await sql`
       SELECT COUNT(*)::int AS count
       FROM registrations
@@ -265,6 +271,7 @@ export async function getRegistrations(
 
     const totalCount = countRows[0]?.count || 0;
 
+    // 2. Fetch paginated records with safe dynamic column sorting
     const dataRows = await sql`
       SELECT 
         id,
@@ -302,7 +309,26 @@ export async function getRegistrations(
         AND (${methodFilter}::text IS NULL OR payment_method = ${methodFilter})
         AND (${genderFilter}::text IS NULL OR gender = ${genderFilter})
         AND (${checkedInFilter}::boolean IS NULL OR checked_in = ${checkedInFilter})
-      ORDER BY created_at DESC
+      ORDER BY
+        CASE WHEN ${sortBy} = 'full_name' AND ${isAsc} THEN full_name END ASC,
+        CASE WHEN ${sortBy} = 'full_name' AND NOT ${isAsc} THEN full_name END DESC,
+        CASE WHEN ${sortBy} = 'student_id' AND ${isAsc} THEN student_id END ASC,
+        CASE WHEN ${sortBy} = 'student_id' AND NOT ${isAsc} THEN student_id END DESC,
+        CASE WHEN ${sortBy} = 'discipline' AND ${isAsc} THEN discipline END ASC,
+        CASE WHEN ${sortBy} = 'discipline' AND NOT ${isAsc} THEN discipline END DESC,
+        CASE WHEN ${sortBy} = 'batch_year' AND ${isAsc} THEN batch_year END ASC,
+        CASE WHEN ${sortBy} = 'batch_year' AND NOT ${isAsc} THEN batch_year END DESC,
+        CASE WHEN ${sortBy} = 'gender' AND ${isAsc} THEN gender END ASC,
+        CASE WHEN ${sortBy} = 'gender' AND NOT ${isAsc} THEN gender END DESC,
+        CASE WHEN ${sortBy} = 'fee_amount' AND ${isAsc} THEN fee_amount END ASC,
+        CASE WHEN ${sortBy} = 'fee_amount' AND NOT ${isAsc} THEN fee_amount END DESC,
+        CASE WHEN ${sortBy} = 'payment_status' AND ${isAsc} THEN payment_status END ASC,
+        CASE WHEN ${sortBy} = 'payment_status' AND NOT ${isAsc} THEN payment_status END DESC,
+        CASE WHEN ${sortBy} = 'checked_in' AND ${isAsc} THEN checked_in END ASC,
+        CASE WHEN ${sortBy} = 'checked_in' AND NOT ${isAsc} THEN checked_in END DESC,
+        CASE WHEN ${sortBy} = 'created_at' AND ${isAsc} THEN created_at END ASC,
+        CASE WHEN ${sortBy} = 'created_at' AND NOT ${isAsc} THEN created_at END DESC,
+        created_at DESC
       LIMIT ${limit} OFFSET ${offset};
     `;
 
@@ -322,7 +348,7 @@ export async function getRegistrations(
 }
 
 /**
- * Export all registrations to CSV string.
+ * Export all registrations to CSV string with UTF-8 BOM.
  */
 export async function exportRegistrationsCsv(): Promise<ActionResponse<string>> {
   try {
@@ -403,9 +429,10 @@ export async function exportRegistrationsCsv(): Promise<ActionResponse<string>> 
       ].join(','))
     ];
 
+    // Prepend UTF-8 BOM so Excel opens Bangla characters cleanly
     return {
       success: true,
-      data: csvLines.join('\n')
+      data: `\uFEFF${csvLines.join('\n')}`
     };
   } catch (err) {
     console.error('exportRegistrationsCsv error:', err);

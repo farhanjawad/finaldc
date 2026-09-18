@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter, Noto_Serif_Bengali } from 'next/font/google';
+import { Inter,  Baloo_Da_2  } from 'next/font/google';
 import '@/app/globals.css';
 import { LanguageProvider } from './context/LanguageContext';
 import Navbar from './components/home/Navbar';
@@ -10,10 +10,10 @@ const inter = Inter({
   display: 'swap',
 });
 
-const notoSerifBengali = Noto_Serif_Bengali({
-  subsets: ['bengali'],
+const balooDa2 = Baloo_Da_2({
+  subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
-  variable: '--font-bengali',
+  variable: '--font-baloo-da-2',
   display: 'swap',
 });
 
@@ -28,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="bn" className={`${inter.variable} ${notoSerifBengali.variable}`}>
+    <html lang="bn" className={`${inter.variable} ${balooDa2.variable}`}>
       <body className="font-sans antialiased bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen">
         <LanguageProvider>
           <Navbar />

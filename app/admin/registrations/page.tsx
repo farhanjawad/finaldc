@@ -1,7 +1,6 @@
 import React, { Suspense } from 'react';
 import { getRegistrations } from '@/app/actions/admin';
 import RegistrationsTable from '@/app/components/admin/RegistrationsTable';
-import { PaymentStatus } from '@/app/lib/types';
 import { Users, Loader2 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -12,8 +11,11 @@ interface PageProps {
     search?: string;
     status?: string;
     batch?: string;
-    discipline?: string;
+    gender?: string;
+    paymentMethod?: string;
     checkedIn?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
   }>;
 }
 
@@ -22,10 +24,13 @@ export default async function AdminRegistrationsPage({ searchParams }: PageProps
 
   const page = parseInt(resolvedParams.page || '1', 10);
   const search = resolvedParams.search || '';
-  const status = (resolvedParams.status as PaymentStatus | 'all') || 'all';
+  const status = resolvedParams.status || 'all';
   const batch = resolvedParams.batch || 'all';
-  const discipline = resolvedParams.discipline || 'all';
+  const gender = resolvedParams.gender || 'all';
+  const paymentMethod = resolvedParams.paymentMethod || 'all';
   const checkedIn = (resolvedParams.checkedIn as 'all' | 'true' | 'false') || 'all';
+  const sortBy = resolvedParams.sortBy || 'created_at';
+  const sortOrder = resolvedParams.sortOrder === 'asc' ? 'asc' : 'desc';
 
   const res = await getRegistrations({
     page,
@@ -33,8 +38,11 @@ export default async function AdminRegistrationsPage({ searchParams }: PageProps
     search,
     status,
     batch,
-    discipline,
+    gender,
+    paymentMethod,
     checkedIn,
+    sortBy,
+    sortOrder,
   });
 
   const registrationsData = res.success && res.data ? res.data : {
@@ -46,7 +54,6 @@ export default async function AdminRegistrationsPage({ searchParams }: PageProps
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-2">
@@ -61,19 +68,16 @@ export default async function AdminRegistrationsPage({ searchParams }: PageProps
             আবেদনকারী শিক্ষার্থী তালিকা
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            শিক্ষার্থীদের নিবন্ধন যাচাই, পেমেন্ট অনুমোদন/বাতিল এবং উপস্থিতি নিয়ন্ত্রণ করুন
+            ফিল্টার ও সাজানোর সুবিধা ব্যবহার করে দ্রুত ভেরিফিকেশন ও এন্ট্রি নিশ্চিত করুন
           </p>
         </div>
       </div>
 
-      {/* Main Table with Suspense Boundary */}
       <Suspense
         fallback={
           <div className="p-16 flex flex-col items-center justify-center gap-3 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
             <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
-            <p className="text-xs text-slate-500 font-semibold">
-              নিবন্ধন তথ্য লোড করা হচ্ছে...
-            </p>
+            <p className="text-xs text-slate-500 font-semibold">নিবন্ধন তথ্য লোড করা হচ্ছে...</p>
           </div>
         }
       >
