@@ -1,12 +1,12 @@
 'use server';
 
-import { sql } from '../db';
+import { sql } from '@/app/db';
 import { getCurrentAdmin } from '@/app/actions/auth';
 import { 
   RegistrationRecord, 
   PaymentStatus, 
   ActionResponse 
-} from '../lib/types';
+} from '@/app/lib/types';
 import { revalidatePath } from 'next/cache';
 
 export interface DashboardStats {
@@ -38,45 +38,189 @@ export interface PaginatedRegistrations {
 }
 
 /**
- * Fetch top-level dashboard metrics across all registrations.
+ * Fetch overview statistics for the admin dashboard.
  */
 export async function getDashboardStats(): Promise<ActionResponse<DashboardStats>> {
   try {
     const admin = await getCurrentAdmin();
     if (!admin) {
-      return { success: false, error: 'অননুমোদিত অ্যাক্সেস। অনুগ্রহ করে লগইন করুন।' };
+      return { success: false, error: 'অননুমোদিত অ্যাক্সেস।' };
     }
 
     const rows = await sql`
-      SELECT
-        COUNT(*)::int AS total_registrations,
-        COUNT(CASE WHEN payment_status = 'approved' THEN 1 END)::int AS approved_count,
-        COUNT(CASE WHEN payment_status = 'pending' THEN 1 END)::int AS pending_count,
-        COUNT(CASE WHEN payment_status = 'rejected' THEN 1 END)::int AS rejected_count,
-        COUNT(CASE WHEN checked_in = TRUE THEN 1 END)::int AS checked_in_count,
-        COALESCE(SUM(CASE WHEN payment_status = 'approved' THEN fee_amount ELSE 0 END), 0)::int AS total_collected_bdt
+      SELECT 
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE payment_status = 'approved')::int AS approved,
+        COUNT(*) FILTER (WHERE payment_status = 'pending')::int AS pending,
+        COUNT(*) FILTER (WHERE payment_status = 'rejected')::int AS rejected,
+        COUNT(*) FILTER (WHERE checked_in = true)::int AS checked_in,
+        COALESCE(SUM(fee_amount) FILTER (WHERE payment_status = 'approved'), 0)::int AS total_collected
       FROM registrations;
     `;
 
-    const raw = rows[0];
-    const stats: DashboardStats = {
-      totalRegistrations: raw.total_registrations || 0,
-      approvedCount: raw.approved_count || 0,
-      pendingCount: raw.pending_count || 0,
-      rejectedCount: raw.rejected_count || 0,
-      checkedInCount: raw.checked_in_count || 0,
-      totalCollectedBdt: raw.total_collected_bdt || 0,
-    };
+    const row = rows[0] || {};
 
-    return { success: true, data: stats };
+    return {
+      success: true,
+      data: {
+        totalRegistrations: row.total || 0,
+        approvedCount: row.approved || 0,
+        pendingCount: row.pending || 0,
+        rejectedCount: row.rejected || 0,
+        checkedInCount: row.checked_in || 0,
+        totalCollectedBdt: row.total_collected || 0,
+      },
+    };
   } catch (err) {
     console.error('getDashboardStats error:', err);
-    return { success: false, error: 'ড্যাশবোর্ড পরিসংখ্যান লোড করতে সমস্যা হয়েছে।' };
+    return {
+      success: false,
+      error: 'পরিসংখ্যান লোড করতে ব্যর্থ হয়েছে।',
+      data: {
+        totalRegistrations: 0,
+        approvedCount: 0,
+        pendingCount: 0,
+        rejectedCount: 0,
+        checkedInCount: 0,
+        totalCollectedBdt: 0,
+      },
+    };
   }
 }
 
 /**
- * Query registrations with multi-attribute filtering, search, and pagination.
+ * Update payment approval status (Approved, Rejected, Pending).
+ * Correctly casts UUID string to uuid and status to payment_status_enum.
+ */
+export async function updatePaymentStatus(
+  id: string,
+  status: PaymentStatus
+): Promise<ActionResponse<void>> {
+  try {
+    const admin = await getCurrentAdmin();
+    if (!admin) {
+      return { success: false, error: 'অননুমোদিত অ্যাক্সেস।' };
+    }
+
+    await sql`
+      UPDATE registrations
+      SET 
+        payment_status = ${status}::payment_status_enum,
+        updated_at = NOW()
+      WHERE id = ${id}::uuid;
+    `;
+
+    revalidatePath('/admin');
+    revalidatePath('/admin/registrations');
+    return { success: true, message: `স্ট্যাটাস পরিবর্তিত হয়েছে: ${status}` };
+  } catch (err) {
+    console.error('updatePaymentStatus error:', err);
+    return { success: false, error: 'পেমেন্ট স্ট্যাটাস পরিবর্তন করতে সমস্যা হয়েছে।' };
+  }
+}
+
+/**
+ * Toggle gate check-in status directly.
+ */
+export async function toggleCheckIn(
+  id: string,
+  checkedIn: boolean = true
+): Promise<ActionResponse<void>> {
+  try {
+    const admin = await getCurrentAdmin();
+    if (!admin) {
+      return { success: false, error: 'অননুমোদিত অ্যাক্সেস।' };
+    }
+
+    await sql`
+      UPDATE registrations
+      SET 
+        checked_in = ${checkedIn},
+        checked_in_at = ${checkedIn ? sql`NOW()` : null},
+        checked_in_by = ${checkedIn ? admin.username : null},
+        updated_at = NOW()
+      WHERE id = ${id}::uuid;
+    `;
+
+    revalidatePath('/admin');
+    revalidatePath('/admin/registrations');
+    return { success: true, message: 'চেক-ইন স্ট্যাটাস আপডেট হয়েছে।' };
+  } catch (err) {
+    console.error('toggleCheckIn error:', err);
+    return { success: false, error: 'চেক-ইন আপডেট করতে ব্যর্থ হয়েছে।' };
+  }
+}
+
+/**
+ * Validate and perform gate check-in via QR or manual code input.
+ */
+export async function verifyGateCheckIn(
+  queryCode: string
+): Promise<ActionResponse<{ registration: RegistrationRecord; alreadyCheckedIn: boolean }>> {
+  try {
+    const admin = await getCurrentAdmin();
+    if (!admin) {
+      return { success: false, error: 'অননুমোদিত অ্যাক্সেস।' };
+    }
+
+    const cleanCode = queryCode.trim().toUpperCase();
+
+    const rows = await sql`
+      SELECT *
+      FROM registrations
+      WHERE UPPER(reg_code) = ${cleanCode}
+         OR UPPER(student_id) = ${cleanCode}
+      LIMIT 1;
+    `;
+
+    if (rows.length === 0) {
+      return { success: false, error: 'কোনো বৈধ নিবন্ধন পাওয়া যায়নি।' };
+    }
+
+    const reg = rows[0] as RegistrationRecord;
+
+    if (reg.payment_status !== 'approved') {
+      return {
+        success: false,
+        error: `পেমেন্ট অনুমোদিত নয় (বর্তমান স্ট্যাটাস: ${reg.payment_status})।`,
+        data: { registration: reg, alreadyCheckedIn: false },
+      };
+    }
+
+    const wasAlreadyCheckedIn = Boolean(reg.checked_in);
+
+    if (!wasAlreadyCheckedIn) {
+      await sql`
+        UPDATE registrations
+        SET 
+          checked_in = true,
+          checked_in_at = NOW(),
+          checked_in_by = ${admin.username},
+          updated_at = NOW()
+        WHERE id = ${reg.id}::uuid;
+      `;
+      reg.checked_in = true;
+      reg.checked_in_at = new Date().toISOString();
+      revalidatePath('/admin');
+      revalidatePath('/admin/registrations');
+    }
+
+    return {
+      success: true,
+      message: wasAlreadyCheckedIn ? 'ইতিপূর্বে প্রবেশ করেছেন!' : 'প্রবেশ সফল হয়েছে!',
+      data: {
+        registration: reg,
+        alreadyCheckedIn: wasAlreadyCheckedIn,
+      },
+    };
+  } catch (err) {
+    console.error('verifyGateCheckIn error:', err);
+    return { success: false, error: 'গেট যাচাই প্রক্রিয়ায় ত্রুটি ঘটেছে।' };
+  }
+}
+
+/**
+ * Fetch registrations with multi-attribute filtering, search, and pagination.
  */
 export async function getRegistrations(
   params: RegistrationsFilterParams = {}
@@ -100,7 +244,6 @@ export async function getRegistrations(
     const checkedInFilter =
       params.checkedIn === 'true' ? true : params.checkedIn === 'false' ? false : null;
 
-    // Total count query with all filter conditions
     const countRows = await sql`
       SELECT COUNT(*)::int AS count
       FROM registrations
@@ -122,7 +265,6 @@ export async function getRegistrations(
 
     const totalCount = countRows[0]?.count || 0;
 
-    // Data query with offset and limit
     const dataRows = await sql`
       SELECT 
         id,
@@ -175,72 +317,12 @@ export async function getRegistrations(
     };
   } catch (err) {
     console.error('getRegistrations error:', err);
-    return { success: false, error: 'রেজিস্ট্রেশন তালিকা লোড করতে ব্যর্থ হয়েছে।' };
+    return { success: false, error: 'তালিকা আনতে সমস্যা হয়েছে।' };
   }
 }
 
 /**
- * Update verification status (Approved/Rejected/Pending).
- */
-export async function updatePaymentStatus(
-  id: number,
-  status: PaymentStatus
-): Promise<ActionResponse<void>> {
-  try {
-    const admin = await getCurrentAdmin();
-    if (!admin) {
-      return { success: false, error: 'অননুমোদিত অ্যাক্সেস।' };
-    }
-
-    await sql`
-      UPDATE registrations
-      SET payment_status = ${status},
-          updated_at = NOW()
-      WHERE id = ${id};
-    `;
-
-    revalidatePath('/admin');
-    revalidatePath('/admin/registrations');
-    return { success: true, message: `স্ট্যাটাস সফলভাবে ${status} করা হয়েছে।` };
-  } catch (err) {
-    console.error('updatePaymentStatus error:', err);
-    return { success: false, error: 'স্ট্যাটাস পরিবর্তন ব্যর্থ হয়েছে।' };
-  }
-}
-
-/**
- * Toggle check-in status directly from admin panel.
- * checkedIn defaults to true so callers passing just (id) won't trigger TS2554.
- */
-export async function toggleCheckIn(
-  id: number,
-  checkedIn: boolean = true
-): Promise<ActionResponse<void>> {
-  try {
-    const admin = await getCurrentAdmin();
-    if (!admin) {
-      return { success: false, error: 'অননুমোদিত অ্যাক্সেস।' };
-    }
-
-    await sql`
-      UPDATE registrations
-      SET checked_in = ${checkedIn},
-          checked_in_at = ${checkedIn ? sql`NOW()` : null},
-          updated_at = NOW()
-      WHERE id = ${id};
-    `;
-
-    revalidatePath('/admin');
-    revalidatePath('/admin/registrations');
-    return { success: true, message: 'চেক-ইন স্ট্যাটাস সফলভাবে আপডেট করা হয়েছে।' };
-  } catch (err) {
-    console.error('toggleCheckIn error:', err);
-    return { success: false, error: 'চেক-ইন আপডেট করতে সমস্যা হয়েছে।' };
-  }
-}
-
-/**
- * Export all approved or filtered registrations as raw CSV string.
+ * Export all registrations to CSV string.
  */
 export async function exportRegistrationsCsv(): Promise<ActionResponse<string>> {
   try {
@@ -269,7 +351,7 @@ export async function exportRegistrationsCsv(): Promise<ActionResponse<string>> 
         checked_in_at,
         created_at
       FROM registrations
-      ORDER BY id ASC;
+      ORDER BY created_at DESC;
     `;
 
     const headers = [
@@ -289,7 +371,7 @@ export async function exportRegistrationsCsv(): Promise<ActionResponse<string>> 
       'Payment Status',
       'Checked In',
       'Check-In Time',
-      'Registered At'
+      'Registration Time'
     ];
 
     const escapeCsv = (val: unknown) => {
@@ -327,6 +409,6 @@ export async function exportRegistrationsCsv(): Promise<ActionResponse<string>> 
     };
   } catch (err) {
     console.error('exportRegistrationsCsv error:', err);
-    return { success: false, error: 'CSV এক্সপোর্ট তৈরি করতে সমস্যা হয়েছে।' };
+    return { success: false, error: 'CSV রূপান্তরে ত্রুটি হয়েছে।' };
   }
 }
