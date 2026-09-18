@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react';
 import { getRegistrations } from '@/app/actions/admin';
 import RegistrationsTable from '@/app/components/admin/RegistrationsTable';
+import { PaymentStatus } from '@/app/lib/types';
 import { Users, Loader2 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -11,6 +12,7 @@ interface PageProps {
     search?: string;
     status?: string;
     batch?: string;
+    discipline?: string;
     gender?: string;
     paymentMethod?: string;
     checkedIn?: string;
@@ -24,8 +26,15 @@ export default async function AdminRegistrationsPage({ searchParams }: PageProps
 
   const page = parseInt(resolvedParams.page || '1', 10);
   const search = resolvedParams.search || '';
-  const status = resolvedParams.status || 'all';
+  
+  // Validate and safely cast status to PaymentStatus | 'all'
+  const validStatuses: PaymentStatus[] = ['approved', 'pending', 'rejected'];
+  const status: PaymentStatus | 'all' = validStatuses.includes(resolvedParams.status as PaymentStatus)
+    ? (resolvedParams.status as PaymentStatus)
+    : 'all';
+
   const batch = resolvedParams.batch || 'all';
+  const discipline = resolvedParams.discipline || 'all';
   const gender = resolvedParams.gender || 'all';
   const paymentMethod = resolvedParams.paymentMethod || 'all';
   const checkedIn = (resolvedParams.checkedIn as 'all' | 'true' | 'false') || 'all';
@@ -38,6 +47,7 @@ export default async function AdminRegistrationsPage({ searchParams }: PageProps
     search,
     status,
     batch,
+    discipline,
     gender,
     paymentMethod,
     checkedIn,
